@@ -104,6 +104,12 @@ After registration, note these values:
 6. Click "Add permissions"
 7. Click "Grant admin consent" (if required)
 
+### Get Graph User Id (Optional)
+1. Go to [Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
+2. Search "my profile"
+3. Click "Run query"
+4. **Important**: Copy the id of user you want
+
 ## Basic Usage
 
 ### Configure Filesystem Disk
