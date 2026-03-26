@@ -7,342 +7,342 @@
     </a>
 </div>
 
+<p align="center">
+  <a href="https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem"><img src="https://img.shields.io/packagist/v/kalprajsolutions/laravel-onedrive-filesystem.svg?style=flat-square" alt="Latest Version on Packagist"></a>
+  <a href="https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem"><img src="https://img.shields.io/packagist/dt/kalprajsolutions/laravel-onedrive-filesystem.svg?style=flat-square" alt="Total Downloads"></a>
+  <a href="https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem"><img src="https://img.shields.io/packagist/l/kalprajsolutions/laravel-onedrive-filesystem.svg?style=flat-square" alt="License"></a>
+  <a href="https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem"><img src="https://img.shields.io/packagist/php-v/kalprajsolutions/laravel-onedrive-filesystem.svg?style=flat-square" alt="PHP Version"></a>
+</p>
+
 # Laravel OneDrive Filesystem
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/kalprajsolutions/laravel-onedrive-filesystem.svg)](https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem)
-[![Total Downloads](https://img.shields.io/packagist/dt/kalprajsolutions/laravel-onedrive-filesystem.svg)](https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem)
-[![License](https://img.shields.io/packagist/license/kalprajsolutions/laravel-onedrive-filesystem.svg)](https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem)
-[![PHP Version](https://img.shields.io/packagist/php-v/kalprajsolutions/laravel-onedrive-filesystem.svg)](https://packagist.org/packages/kalprajsolutions/laravel-onedrive-filesystem)
-[![Build Status](https://img.shields.io/travis/kalprajsolutions/laravel-onedrive-filesystem.svg)](https://travis-ci.org/kalprajsolutions/laravel-onedrive-filesystem)
-[![StyleCI](https://github.styleci.io/repos/123456789/shield)](https://styleci.io/repos/123456789)
+Use **Microsoft OneDrive for Business** as a native Laravel filesystem disk. This package provides a drop-in OneDrive filesystem driver powered by the **Microsoft Graph API** with automatic token caching — no OAuth redirects, no manual token refresh, no boilerplate.
 
-Seamless **OneDrive integration** for Laravel's filesystem. Use **Microsoft Graph API** to store, retrieve, and manage files in **OneDrive for Business**. This package provides a full-featured Laravel filesystem driver that supports all standard Laravel storage operations including file uploads, downloads, directory management, and sharing capabilities.
+Works with `Storage::disk('onedrive')` exactly like local or S3 storage. Upload files, download files, manage directories, generate sharing URLs — all through Laravel's standard Storage facade.
 
-## Table of Contents
+**Laravel 10, 11, and 12** supported. **PHP 8.1+** required.
 
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Environment Variables](#environment-variables)
-- [Azure AD App Registration](#azure-ad-app-registration)
-- [Basic Usage](#basic-usage)
-- [File Operations](#file-operations)
-- [Directory Operations](#directory-operations)
-- [Available Methods](#available-methods)
-- [Testing](#testing)
-- [Changelog](#changelog)
-- [Contributing](#contributing)
-- [Security](#security)
-- [License](#license)
-- [FAQ](#faq)
+---
+
+## Why This Package?
+
+There are other OneDrive adapters for Laravel, but most of them share the same problems:
+
+- They require you to manually handle OAuth redirects and store access tokens yourself.
+- They give you a Flysystem adapter you have to wire up with `Storage::build()` instead of the familiar `Storage::disk()`.
+- They don't cache tokens, so every request hits Azure AD for a new token.
+- They only support one account at a time.
+
+This package fixes all of that. It registers as a real Laravel filesystem driver, caches tokens using Laravel's cache system, and supports multiple OneDrive accounts through multiple disk configurations. You install it, add your Azure AD credentials to `.env`, and start using `Storage::disk('onedrive')` — the same way you'd use any other Laravel storage disk.
+
+### How It Compares
+
+| Feature | This Package | `justus/flysystem-onedrive` | `sahablibya/laravel-sharepoint-filesystem` | `LLoadout/microsoftgraph` |
+|---|:---:|:---:|:---:|:---:|
+| Native `Storage::disk('onedrive')` | ✅ | ❌ (requires `Storage::build()`) | ✅ | ✅ |
+| Client credentials auth (no OAuth redirect) | ✅ | ❌ (manual token required) | ✅ | ❌ |
+| Automatic token caching | ✅ | ❌ | ✅ | ❌ |
+| Multiple OneDrive accounts | ✅ | ❌ | ❌ | ❌ |
+| Laravel 10 support | ✅ | ❌ | ✅ | ✅ |
+| Laravel 12 support | ✅ | ✅ | ✅ | ✅ |
+| Scoped base path (`GRAPH_BASE_PATH`) | ✅ | ❌ | ❌ | ❌ |
+| Pure OneDrive focus (no bloat) | ✅ | ✅ | ❌ (SharePoint included) | ❌ (Mail, Teams, Excel included) |
+
+---
+
+## Who Is This For?
+
+- You're building a **Laravel app on a corporate Microsoft 365 tenant** and want to store files on OneDrive for Business instead of (or alongside) S3 or local storage.
+- You need a filesystem disk for **Spatie Laravel Backup** that lands on OneDrive.
+- You want to give users file storage backed by OneDrive without building a custom OAuth flow.
+- You're running **automated jobs, cron commands, or queues** that need to read/write OneDrive files without a browser-based login.
+
+---
 
 ## Installation
 
-Install the package via Composer:
+Install via Composer:
 
 ```bash
 composer require kalprajsolutions/laravel-onedrive-filesystem
 ```
 
-### Prerequisites
-
-- PHP 8.1 or higher
-- Laravel 10, 11, or 12
-- Guzzle HTTP client
-
-## Configuration
-
-Publish the configuration file to your application:
+Publish the configuration file:
 
 ```bash
 php artisan vendor:publish --tag=onedrive-config
 ```
 
-This will create a configuration file at `config/onedrive.php`.
+This creates `config/onedrive.php` in your application.
 
-## Environment Variables
+---
 
-Add the following environment variables to your `.env` file:
+## Configuration
 
-```env
-# Microsoft Azure AD Configuration
+### Environment Variables
+
+Add these to your `.env` file:
+
+```dotenv
 GRAPH_CLIENT_ID=your-client-id
 GRAPH_TENANT_ID=your-tenant-id
 GRAPH_CLIENT_SECRET=your-client-secret
-
-# OneDrive User ID (email or object ID)
-GRAPH_USER_ID=user@domain.com
-
-# Optional: Base path within OneDrive
+GRAPH_USER_ID=user@yourdomain.com
 GRAPH_BASE_PATH=
 ```
 
-## Azure AD App Registration
+### Filesystem Disk
 
-### Create App Registration
-
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Navigate to Azure Active Directory > App registrations
-3. Click "New registration"
-4. Fill in the details:
-   - Name: Your app name
-   - Supported account types: Accounts in this organizational directory only (Single tenant)
-   - Redirect URI: Leave blank for now
-5. Click "Register"
-
-### Note Important Values
-
-After registration, note these values:
-- Application (client) ID
-- Directory (tenant) ID
-
-### Create Client Secret
-
-1. Go to "Certificates & secrets"
-2. Click "New client secret"
-3. Add a description and select expiration
-4. Click "Add"
-5. **Important**: Copy the secret value immediately (it won't be shown again)
-
-### Add API Permissions
-
-1. Go to "API permissions"
-2. Click "Add a permission"
-3. Select "Microsoft Graph"
-4. Select "Application permissions"
-5. Add: `Files.ReadWrite.All`
-6. Click "Add permissions"
-7. Click "Grant admin consent" (if required)
-
-### Get Graph User Id (Optional)
-1. Go to [Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
-2. Search "my profile"
-3. Click "Run query"
-4. **Important**: Copy the id of user you want
-
-## Basic Usage
-
-### Configure Filesystem Disk
-
-Add the OneDrive disk to your `config/filesystems.php`:
+Add the OneDrive disk to `config/filesystems.php`:
 
 ```php
 'disks' => [
     // ...
 
     'onedrive' => [
-        'driver' => 'onedrive',
-        'client_id' => env('GRAPH_CLIENT_ID'),
-        'tenant_id' => env('GRAPH_TENANT_ID'),
-        'client_secret' => env('GRAPH_CLIENT_SECRET'),
-        'user_id' => env('GRAPH_USER_ID'),
-        'base_path' => env('GRAPH_BASE_PATH'),
+        'driver'       => 'onedrive',
+        'client_id'    => env('GRAPH_CLIENT_ID'),
+        'tenant_id'    => env('GRAPH_TENANT_ID'),
+        'client_secret'=> env('GRAPH_CLIENT_SECRET'),
+        'user_id'      => env('GRAPH_USER_ID'),
+        'base_path'    => env('GRAPH_BASE_PATH'),
     ],
 ],
 ```
 
-### Basic File Operations
+### Multiple Accounts
+
+You can configure multiple OneDrive disks for different accounts:
 
 ```php
-use Illuminate\Support\Facades\Storage;
-
-// Write a file to OneDrive
-Storage::disk('onedrive')->put('filename.txt', 'Hello World');
-
-// Read a file from OneDrive
-$content = Storage::disk('onedrive')->get('filename.txt');
-
-// Check if file exists in OneDrive
-$exists = Storage::disk('onedrive')->exists('filename.txt');
-
-// Delete a file from OneDrive
-Storage::disk('onedrive')->delete('filename.txt');
+'disks' => [
+    'onedrive' => [
+        'driver'       => 'onedrive',
+        'client_id'    => env('GRAPH_CLIENT_ID'),
+        'tenant_id'    => env('GRAPH_TENANT_ID'),
+        'client_secret'=> env('GRAPH_CLIENT_SECRET'),
+        'user_id'      => env('GRAPH_USER_ID'),
+        'base_path'    => env('GRAPH_BASE_PATH'),
+    ],
+    'onedrive_backup' => [
+        'driver'       => 'onedrive',
+        'client_id'    => env('BACKUP_GRAPH_CLIENT_ID'),
+        'tenant_id'    => env('BACKUP_GRAPH_TENANT_ID'),
+        'client_secret'=> env('BACKUP_GRAPH_CLIENT_SECRET'),
+        'user_id'      => env('BACKUP_GRAPH_USER_ID'),
+        'base_path'    => env('BACKUP_GRAPH_BASE_PATH'),
+    ],
+],
 ```
 
-## File Operations
+---
 
-### Upload Files
+## Azure AD App Registration
+
+You need an Azure AD app registration with **application permissions** (not delegated). This is what allows the package to authenticate without a user login flow.
+
+### Step 1: Register the App
+
+1. Go to [Azure Portal](https://portal.azure.com) → **Azure Active Directory** → **App registrations** → **New registration**
+2. Name: your app name
+3. Supported account types: **Accounts in this organizational directory only** (Single tenant)
+4. Redirect URI: leave blank
+5. Click **Register**
+
+### Step 2: Collect Credentials
+
+After registration, copy these values:
+- **Application (client) ID** → `GRAPH_CLIENT_ID`
+- **Directory (tenant) ID** → `GRAPH_TENANT_ID`
+
+### Step 3: Create a Client Secret
+
+1. Go to **Certificates & secrets** → **New client secret**
+2. Add a description, pick an expiration, click **Add**
+3. Copy the **secret value** immediately (it won't be shown again) → `GRAPH_CLIENT_SECRET`
+
+### Step 4: Add API Permissions
+
+1. Go to **API permissions** → **Add a permission** → **Microsoft Graph** → **Application permissions**
+2. Add: `Files.ReadWrite.All`
+3. Click **Grant admin consent** (requires admin role)
+
+### Step 5: Get the User ID
+
+1. Go to [Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
+2. Sign in and run the "my profile" query
+3. Copy the `id` from the response → `GRAPH_USER_ID`
+
+---
+
+## Usage
+
+All standard Laravel filesystem methods work. Here are the most common operations:
+
+### Write and Read Files
 
 ```php
 use Illuminate\Support\Facades\Storage;
 
-// Upload a string content
+// Write a file
 Storage::disk('onedrive')->put('documents/report.txt', 'Report content');
 
-// Upload from uploaded file
+// Read a file
+$content = Storage::disk('onedrive')->get('documents/report.txt');
+```
+
+### Upload Files from Requests
+
+```php
+// Upload with auto-generated filename
 Storage::disk('onedrive')->putFile('avatars', $request->file('avatar'));
 
-// Upload with custom filename
+// Upload with a custom filename
 Storage::disk('onedrive')->putFileAs('documents', $request->file('document'), 'custom-name.pdf');
 ```
 
 ### Download Files
 
 ```php
-use Illuminate\Support\Facades\Storage;
-
-// Download as response
+// Return a download response
 return Storage::disk('onedrive')->download('document.pdf', 'my-document.pdf');
 
-// Get file URL for sharing
+// Get a sharing URL
 $url = Storage::disk('onedrive')->getUrl('document.pdf');
+```
+
+### Check, Copy, Move, Delete
+
+```php
+// Check existence
+$exists = Storage::disk('onedrive')->exists('filename.txt');
+
+// Copy
+Storage::disk('onedrive')->copy('source.txt', 'destination.txt');
+
+// Move / Rename
+Storage::disk('onedrive')->move('old-name.txt', 'new-name.txt');
+
+// Delete
+Storage::disk('onedrive')->delete('filename.txt');
 ```
 
 ### File Metadata
 
 ```php
-use Illuminate\Support\Facades\Storage;
-
-// Get file size
-$size = Storage::disk('onedrive')->size('filename.txt');
-
-// Get last modified timestamp
+$size      = Storage::disk('onedrive')->size('filename.txt');
 $timestamp = Storage::disk('onedrive')->lastModified('filename.txt');
-
-// Get MIME type
-$mime = Storage::disk('onedrive')->mimeType('filename.txt');
+$mime      = Storage::disk('onedrive')->mimeType('filename.txt');
 ```
 
-### File Copy and Move
+### Directory Operations
 
 ```php
-use Illuminate\Support\Facades\Storage;
-
-// Copy file within OneDrive
-Storage::disk('onedrive')->copy('source.txt', 'destination.txt');
-
-// Move/Rename file in OneDrive
-Storage::disk('onedrive')->move('old-name.txt', 'new-name.txt');
-```
-
-## Directory Operations
-
-### Create Directories
-
-```php
-use Illuminate\Support\Facades\Storage;
-
-// Create a directory in OneDrive
+// Create a directory
 Storage::disk('onedrive')->createDirectory('Documents/NewFolder');
-```
 
-### List Directory Contents
-
-```php
-use Illuminate\Support\Facades\Storage;
-
-// List all files in a directory
+// List files
 $files = Storage::disk('onedrive')->files('Documents');
 
-// List all directories in a path
-$directories = Storage::disk('onedrive')->directories('Documents');
-
-// List all files recursively
+// List files recursively
 $allFiles = Storage::disk('onedrive')->allFiles('Documents');
 
-// List all directories recursively
-$allDirs = Storage::disk('onedrive')->allDirectories('Documents');
-
-// List all contents with details
-$contents = Storage::disk('onedrive')->listContents('Documents');
-```
-
-### Delete Directories
-
-```php
-use Illuminate\Support\Facades\Storage;
+// List directories
+$directories = Storage::disk('onedrive')->directories('Documents');
 
 // Delete a directory and its contents
 Storage::disk('onedrive')->deleteDirectory('Documents/OldFolder');
 ```
 
+---
+
 ## Available Methods
 
-The Laravel OneDrive filesystem driver supports all standard Laravel filesystem methods:
-
 | Method | Description |
-|--------|-------------|
+|---|---|
 | `put($path, $contents)` | Write content to a file |
 | `putFile($path, $file)` | Upload a file |
-| `putFileAs($path, $file, $name)` | Upload with custom name |
+| `putFileAs($path, $file, $name)` | Upload with a custom name |
 | `get($path)` | Read file content |
-| `download($path, $name)` | Download file as response |
+| `download($path, $name)` | Download as a response |
 | `exists($path)` | Check if file exists |
 | `delete($path)` | Delete a file |
-| `copy($source, $destination)` | Copy file |
-| `move($source, $destination)` | Move file |
+| `copy($source, $destination)` | Copy a file |
+| `move($source, $destination)` | Move / rename a file |
 | `size($path)` | Get file size |
 | `lastModified($path)` | Get last modified timestamp |
 | `mimeType($path)` | Get MIME type |
-| `files($directory)` | List files in directory |
+| `files($directory)` | List files in a directory |
 | `directories($directory)` | List directories |
 | `allFiles($directory)` | List all files recursively |
 | `allDirectories($directory)` | List all directories recursively |
-| `createDirectory($path)` | Create directory |
-| `deleteDirectory($directory)` | Delete directory |
-| `getUrl($path)` | Get sharing URL |
+| `createDirectory($path)` | Create a directory |
+| `deleteDirectory($directory)` | Delete a directory |
+| `getUrl($path)` | Get a sharing URL |
 
-## Testing
+---
 
-Run the test suite:
+## Spatie Laravel Backup
 
-```bash
-composer test
+This package works as a backup destination for [spatie/laravel-backup](https://github.com/spatie/laravel-backup). Configure your backup disk:
+
+```php
+// config/backup.php
+'destination' => [
+    'disks' => ['onedrive'],
+],
 ```
 
-## Changelog
+Then run your backup as usual:
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+```bash
+php artisan backup:run
+```
 
-## Contributing
+---
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+## Token Caching
 
-## Security
+Access tokens are automatically cached using Laravel's default cache driver. You don't need to configure anything — the package handles token acquisition and refresh transparently. Make sure your cache driver is properly configured (Redis, Memcached, or database all work fine).
 
-If you discover any security related issues, please email dev@kalprajsolutions.com instead of using the issue tracker.
-
-## License
-
-The MIT License (MIT). Please see [License File](LICENSE) for more information.
+---
 
 ## FAQ
 
-### What versions of Laravel are supported?
+### What Laravel versions are supported?
 
-This package supports Laravel 10, 11, and 12 with PHP 8.1 or higher.
-
-### How do I obtain Microsoft Graph API credentials?
-
-You need to register an application in Azure Active Directory. Follow the [Azure AD App Registration](#azure-ad-app-registration) section for detailed instructions.
-
-### What permissions does the app need?
-
-The application requires `Files.ReadWrite.All` permission from Microsoft Graph API to read and write files to OneDrive.
-
-### How do I handle token expiration?
-
-This package uses Laravel's default cache mechanism. Tokens are automatically cached and refreshed. Make sure your cache configuration is properly set up.
+Laravel 10, 11, and 12.
 
 ### Can I use this with personal Microsoft accounts?
 
-This package is designed for OneDrive for Business. For personal Microsoft accounts, additional configuration may be required.
+This package is built for **OneDrive for Business** (Microsoft 365 / organizational accounts). Personal Microsoft accounts (`@outlook.com`, `@hotmail.com`) may require additional configuration and are not officially supported.
 
-### Where can I get support?
+### How do I use a scoped base path?
 
-For issues and feature requests, please use the GitHub issue tracker. For general questions, email dev@kalprajsolutions.com.
+Set `GRAPH_BASE_PATH` in your `.env` to a folder name. All file operations will be relative to that folder inside OneDrive. For example, `GRAPH_BASE_PATH=MyApp` means `Storage::disk('onedrive')->put('file.txt', ...)` writes to `MyApp/file.txt` in OneDrive.
 
-### Is this package production-ready?
+### Does this support large file uploads?
 
-Yes, this package follows Laravel best practices and uses the official Microsoft Graph API for OneDrive integration. However, always test in a staging environment before deploying to production.
+Yes. The adapter uses Microsoft Graph upload sessions for files that exceed the simple upload limit.
 
-### How do I configure a base path?
+### How do I get support?
 
-Set the `GRAPH_BASE_PATH` environment variable to define a base folder within OneDrive. All file operations will be relative to this path.
+Open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-filesystem/issues) or email [dev@kalprajsolutions.com](mailto:dev@kalprajsolutions.com).
 
-### Can I use multiple OneDrive accounts?
+---
 
-Yes, you can configure multiple disks in your `config/filesystems.php` with different credentials for each account.
+## Changelog
 
-### Does this package support large file uploads?
+See [CHANGELOG.md](CHANGELOG.md) for recent changes.
 
-Yes, the adapter supports creating upload sessions for large files through the Microsoft Graph API.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details. Contributions, bug reports, and feature requests are welcome.
+
+## Security
+
+If you discover a security vulnerability, email [dev@kalprajsolutions.com](mailto:dev@kalprajsolutions.com) instead of opening a public issue.
+
+## License
+
+The MIT License (MIT). See [LICENSE](LICENSE) for details.
