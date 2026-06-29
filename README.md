@@ -209,6 +209,15 @@ return Storage::disk('onedrive')->download('document.pdf', 'my-document.pdf');
 
 // Get a sharing URL
 $url = Storage::disk('onedrive')->getUrl('document.pdf');
+
+// Stream large files
+$source = Storage::disk('onedrive')->readStream('large-file.zip');
+$dest   = fopen(storage_path('large-file.zip'), 'w');
+
+stream_copy_to_stream($source, $dest);
+
+fclose($source);
+fclose($dest);
 ```
 
 ### Check, Copy, Move, Delete
@@ -264,6 +273,7 @@ Storage::disk('onedrive')->deleteDirectory('Documents/OldFolder');
 | `putFile($path, $file)` | Upload a file |
 | `putFileAs($path, $file, $name)` | Upload with a custom name |
 | `get($path)` | Read file content |
+| `readStream($path)` | Read file as a stream |
 | `download($path, $name)` | Download as a response |
 | `exists($path)` | Check if file exists |
 | `delete($path)` | Delete a file |
@@ -325,9 +335,28 @@ Set `GRAPH_BASE_PATH` in your `.env` to a folder name. All file operations will 
 
 Yes. The adapter uses Microsoft Graph upload sessions for files that exceed the simple upload limit.
 
+```php
+/**
+ * Microsoft Graph's simple "PUT .../content" endpoint only supports
+ * files up to 4 MiB. Anything larger MUST go through an upload session.
+ *
+ * @see https://learn.microsoft.com/en-us/graph/api/driveitem-put-content
+ */
+private const SIMPLE_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Each upload-session fragment (except the last) must be a multiple of
+ * 320 KiB, and the docs warn you may be throttled above 60 MiB per
+ * request. 10 MiB is a safe multiple of 320 KiB well under that ceiling.
+ *
+ * @see https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession
+ */
+private const CHUNK_SIZE = 10 * 1024 * 1024;
+```
+
 ### How do I get support?
 
-Open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-filesystem/issues) or email [dev@kalprajsolutions.com](mailto:dev@kalprajsolutions.com).
+Open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-filesystem/issues) or contact us through [kalprajsolutions.com](https://kalprajsolutions.com).
 
 ---
 
@@ -335,13 +364,15 @@ Open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-f
 
 See [CHANGELOG.md](CHANGELOG.md) for recent changes.
 
+**v1.1** — Added chunk upload support for files larger than 4 MiB via Microsoft Graph upload sessions.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details. Contributions, bug reports, and feature requests are welcome.
 
 ## Security
 
-If you discover a security vulnerability, email [dev@kalprajsolutions.com](mailto:dev@kalprajsolutions.com) instead of opening a public issue.
+If you discover a security vulnerability, please open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-filesystem/issues) or contact us through [kalprajsolutions.com](https://kalprajsolutions.com).
 
 ## License
 
