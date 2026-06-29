@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KalprajSolutions\LaravelOnedriveFilesystem;
 
+use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\StreamWrapper;
@@ -444,7 +445,7 @@ class OneDriveAdapter implements FilesystemAdapter
             $path,
             $metadata['size'] ?? null,
             null,
-            $metadata['lastModifiedDateTime'] ?? null,
+            Carbon::parse($metadata['lastModifiedDateTime'])->timestamp ?? null,
             $metadata['file']['mimeType'] ?? null
         );
     }
