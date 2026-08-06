@@ -20,7 +20,7 @@ Use **Microsoft OneDrive for Business** as a native Laravel filesystem disk. Thi
 
 Works with `Storage::disk('onedrive')` exactly like local or S3 storage. Upload files, download files, manage directories, generate sharing URLs — all through Laravel's standard Storage facade.
 
-**Laravel 10, 11, and 12** supported. **PHP 8.1+** required.
+**Laravel 10, 11, 12, and 13** supported. **PHP 8.1+** required.
 
 ---
 
@@ -45,8 +45,11 @@ This package fixes all of that. It registers as a real Laravel filesystem driver
 | Multiple OneDrive accounts | ✅ | ❌ | ❌ | ❌ |
 | Laravel 10 support | ✅ | ❌ | ✅ | ✅ |
 | Laravel 12 support | ✅ | ✅ | ✅ | ✅ |
+| Laravel 13 support | ✅ | — | — | — |
 | Scoped base path (`GRAPH_BASE_PATH`) | ✅ | ❌ | ❌ | ❌ |
 | Pure OneDrive focus (no bloat) | ✅ | ✅ | ❌ (SharePoint included) | ❌ (Mail, Teams, Excel included) |
+
+A dash means we have not verified that version against the package in question, not that it fails.
 
 ---
 
@@ -66,6 +69,30 @@ Install via Composer:
 ```bash
 composer require kalprajsolutions/laravel-onedrive-filesystem
 ```
+
+### Installing the Laravel 13 branch
+
+Packagist still serves the release constrained to Laravel 12, so on Laravel 13
+you need to point Composer at this fork until the change is released upstream.
+Add the repository to your application's `composer.json`:
+
+```json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/ValleyInv/laravel-onedrive-filesystem"
+    }
+]
+```
+
+Then require the branch:
+
+```bash
+composer require kalprajsolutions/laravel-onedrive-filesystem:dev-laravel-13-support
+```
+
+Drop the `repositories` entry and go back to a normal version constraint once
+upstream ships a release supporting Laravel 13.
 
 Publish the configuration file:
 
@@ -321,7 +348,14 @@ Access tokens are automatically cached using Laravel's default cache driver. You
 
 ### What Laravel versions are supported?
 
-Laravel 10, 11, and 12.
+Laravel 10, 11, 12, and 13.
+
+Laravel 13 support is a constraint change only — no source changes were needed.
+`OneDriveAdapter` implements Flysystem's `FilesystemAdapter` and touches no
+Illuminate classes at all, the service provider uses the `Storage::extend`
+pattern that 13.x still documents, and the only framework facade in the package
+is `Cache`, which stores an array rather than an object (so Laravel 13's
+`serializable_classes` hardening does not apply).
 
 ### Can I use this with personal Microsoft accounts?
 
@@ -363,6 +397,9 @@ Open an issue on [GitHub](https://github.com/kalprajsolutions/laravel-onedrive-f
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for recent changes.
+
+**Unreleased** — Laravel 13 support. Widened the `illuminate/support` and
+`illuminate/filesystem` constraints to include `^13.0`. No source changes.
 
 **v1.1** — Added chunk upload support for files larger than 4 MiB via Microsoft Graph upload sessions.
 
