@@ -171,7 +171,7 @@ After registration, copy these values:
 
 1. Go to [Graph Explorer](https://developer.microsoft.com/en-us/graph/graph-explorer)
 2. Sign in and run the "my profile" query
-3. Copy the `id` from the response → `GRAPH_USER_ID`
+3. Copy the `id` from the response → `GRAPH_USER_ID` // your email address also works
 
 ---
 
